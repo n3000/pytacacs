@@ -1,0 +1,4 @@
+# pytacacs_plus[aws]
+aioboto3==4.0.1
+# pytacacs_plus[redis]
+aioredis==1.1.0
