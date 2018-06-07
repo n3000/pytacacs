@@ -2,16 +2,21 @@ import os
 import configparser
 import logging
 import socket
+import crypt
+import hmac
+
 from typing import Union, Optional, List
 
 from pytacacs_plus.accounting_plugins import get_accounting_plugins
 from pytacacs_plus.accounting_plugins.base import BaseAccountingPlugin
+from pytacacs_plus.authentication_plugins import get_authentication_plugins
+from pytacacs_plus.authentication_plugins.base import BaseAuthenticationPlugin
 
 
 logger = logging.getLogger('tacacs.config')
 
 ACCOUNTING_PLUGINS = get_accounting_plugins()
-
+AUTHENTICATION_PLUGINS = get_authentication_plugins()
 
 class Client(object):
     def __init__(self, name, ip, shared_key=None):
@@ -25,6 +30,9 @@ class User(object):
         self.name = name
         self.password = password
         self.priv = priv
+
+    def authenticate(self, password):
+        return hmac.compare_digest(crypt.crypt(password, self.password), self.password)
 
 
 class Config(object):
@@ -49,9 +57,11 @@ class Config(object):
         }
 
         self.accounting = {}
+        self.authentication = {}
 
         self._deal_with_logging()
         self._deal_with_accounting()
+        self._deal_with_authentication()
 
         for section in self.parser.sections():
             if section.startswith('client:'):
@@ -132,6 +142,26 @@ class Config(object):
             else:
                 logger.warning('Accounting plugin {0} doesnt exist'.format(plugin))
 
+    def _deal_with_authentication(self):
+        self.authentication['plugins'] = []
+
+        plugins = self.parser.get('authentication', 'plugins', fallback='Dummy').split(',')
+
+        for plugin in plugins:
+            if plugin in AUTHENTICATION_PLUGINS:
+                plugin_class = AUTHENTICATION_PLUGINS[plugin]
+
+                try:
+                    plugin_obj = plugin_class(self)
+                    logger.info('Registered authentication plugin {0}'.format(plugin))
+                except Exception as err:
+                    logger.exception('Failed to initialise accounting plugin {0}'.format(plugin), exc_info=err)
+                    continue
+
+                self.authentication['plugins'].append(plugin_obj)
+            else:
+                logger.warning('Authentication plugin {0} doesnt exist'.format(plugin))
+
     def get_shared_key(self, client_addr: Optional[str]=None) -> Union[str, None]:
         if client_addr in self and self[client_addr].shared_key:
             return self[client_addr].shared_key
@@ -143,6 +173,9 @@ class Config(object):
 
     def get_accounting_plugins(self) -> List[BaseAccountingPlugin]:
         return self.accounting['plugins']
+
+    def get_authentication_plugins(self) -> List[BaseAuthenticationPlugin]:
+        return self.authentication['plugins']
 
 
 def read_config(file: str) -> Config:

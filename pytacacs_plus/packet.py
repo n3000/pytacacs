@@ -325,7 +325,7 @@ class AuthenPacket(Packet):
 
         self.continue_data = result_data
 
-    def create_reply(self, status: TACACSAuthenticationStatus, flags: TACACSAuthenticationReplyFlags=0, server_msg: Optional[str]=None, data: Optional[bytes]=None):
+    def create_reply(self, status: TACACSAuthenticationStatus, flags: Union[TACACSAuthenticationReplyFlags, int]=0, server_msg: Optional[str]=None, data: Optional[bytes]=None):
         if server_msg:
             server_msg = server_msg.encode()
         else:

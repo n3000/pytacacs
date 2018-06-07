@@ -3,7 +3,7 @@ import binascii
 import logging
 from typing import Optional
 
-from pytacacs_plus.packet import PacketDecoder, DecodeError
+from pytacacs_plus.packet import PacketDecoder
 from pytacacs_plus.session import SessionFactory
 from pytacacs_plus.config import read_config, Config
 
@@ -97,13 +97,13 @@ def configure_logging(config: Optional[Config]=None):
         l.setLevel(log_level)
 
 
-async def main(loop: asyncio.AbstractEventLoop):
+async def main(config_path: str, loop: asyncio.AbstractEventLoop):
     # Configure Logging
     configure_logging()
     logger = logging.getLogger('tacacs')
 
     # Read config file
-    config = read_config('../resources/config.ini')
+    config = read_config(config_path)
     configure_logging(config)
 
     server_obj = lambda: TACACSPlusProtocol(config=config)
@@ -113,10 +113,14 @@ async def main(loop: asyncio.AbstractEventLoop):
     return server
 
 
-if __name__ == '__main__':
-    event_loop = asyncio.get_event_loop()
-    server_handler = event_loop.run_until_complete(main(event_loop))
+def run(config: str=None):
+    if config is None:
+        raise RuntimeError('config cannot be None')
 
+    event_loop = asyncio.get_event_loop()
+
+    coro = main(config_path=config, loop=event_loop)
+    server_handler = event_loop.run_until_complete(coro)
     try:
         event_loop.run_forever()
     except KeyboardInterrupt:
@@ -126,3 +130,9 @@ if __name__ == '__main__':
     server_handler.close()
     event_loop.run_until_complete(server_handler.wait_closed())
     event_loop.close()
+
+
+if __name__ == '__main__':
+    import os
+    _config_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'config.ini')
+    run(config=_config_path)

@@ -20,74 +20,79 @@ class Session(object):
         """
         raise NotImplementedError()
 
-    # Stock functions
-    def auth_user(self, user, password):
-        user = self.config.get_user(user)
-
-        if not user:
-            return False
-
-        # If user has no password, then yolo
-        return not user.password or user.password == password
-
 
 class AuthenticationSession(Session):
     def __init__(self, *args, **kwargs):
         super(AuthenticationSession, self).__init__(*args, **kwargs)
 
-        self.user = None
-        self.pw = None
         self.remote_address = None
 
         # First pkt from client is a START packet
         self._seen_start_pkt = False
+
+        self.packets = []
 
     async def process(self, packet: pytacacs_plus.packet.AuthenPacket) -> Union[bytes, None]:
         res = None
 
         if not self._seen_start_pkt:
             self._seen_start_pkt = True
-            res = self._handle_start_pkt(packet)
-        elif self.pw is None:  # So if they've given us a dud password, it'll close connection next time they try anytihng
-            # Handle continue packet
-            res = self._handle_continue_pkt(packet)
+            res = await self._handle_start_pkt(packet)
         else:
-            logger.warning('Got additional TACACS CONTINUE packet after receiving user password, not accounted for, so abort')
+            res = await self._handle_continue_pkt(packet)
 
         return res
 
-    def _handle_start_pkt(self, packet: pytacacs_plus.packet.AuthenPacket) -> Union[bytes, None]:
+    async def _handle_start_pkt(self, packet: pytacacs_plus.packet.AuthenPacket) -> Union[bytes, None]:
         packet.decode_start()
 
         self.user = packet.start_data['user']
         self.remote_address = packet.start_data['rem_addr']
 
+        # Start saving packets, as we could have N continue pkts
+        self.packets.append(packet)
+
+        status = pytacacs_plus.packet.TACACSAuthenticationStatus.TAC_PLUS_AUTHEN_STATUS_FAIL
+        flags = 0
+        for plugin in self.config.get_authentication_plugins():
+            new_status, flags = await plugin.process_start(packet)
+
+            if new_status is None:
+                continue
+
+            status = new_status
+            break
+
         # Create reply, we need a password
         pkt = packet.create_reply(
-            status=pytacacs_plus.packet.TACACSAuthenticationStatus.TAC_PLUS_AUTHEN_STATUS_GETPASS,
-            flags=pytacacs_plus.packet.TACACSAuthenticationReplyFlags.TAC_PLUS_REPLY_FLAG_NOECHO,  # Hide password when its typed in
+            status=status,
+            flags=flags,
         )
 
-        logger.debug('Sending reply packet to {0} requesting password'.format(self.source_addr))
+        logger.debug('Sending reply packet to {0}'.format(self.source_addr))
         return pkt
 
-    def _handle_continue_pkt(self, packet: pytacacs_plus.packet.AuthenPacket) -> Union[bytes, None]:
+    async def _handle_continue_pkt(self, packet: pytacacs_plus.packet.AuthenPacket) -> Union[bytes, None]:
         packet.decode_continue()
+
+        self.packets.append(packet)
 
         if pytacacs_plus.packet.TACACSAuthenticationContinueFlags.TAC_PLUS_CONTINUE_FLAG_ABORT in packet.continue_data['flags']:
             return None
 
-        self.pw = packet.continue_data['user_msg']
-        # Herewe decide on auth,
-        if self.auth_user(self.user, self.pw):
-            status = pytacacs_plus.packet.TACACSAuthenticationStatus.TAC_PLUS_AUTHEN_STATUS_PASS
-            logger.info('{0} is trying to authenticate user {1}. Success'.format(self.remote_address, self.user))
-        else:
-            status = pytacacs_plus.packet.TACACSAuthenticationStatus.TAC_PLUS_AUTHEN_STATUS_FAIL
-            logger.info('{0} is trying to authenticate user {1}. Password failure'.format(self.remote_address, self.user))
+        status = pytacacs_plus.packet.TACACSAuthenticationStatus.TAC_PLUS_AUTHEN_STATUS_FAIL
+        flags = 0
+        for plugin in self.config.get_authentication_plugins():
+            new_status, flags = await plugin.process_continue(self.packets)
 
-        pkt = packet.create_reply(status=status)
-        logger.debug('Sending success packet to {0} requesting auth'.format(self.source_addr))
+            if new_status is None:
+                continue
+
+            status = new_status
+            break
+
+        pkt = packet.create_reply(status=status, flags=flags)
+        logger.debug('Sending authentication reply packet to {0}'.format(self.source_addr))
         return pkt
 
 
