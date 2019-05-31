@@ -13,7 +13,7 @@ class BaseAuthenticationPlugin(object):
     def __init__(self, config: "Config") -> None:
         self.config = config
 
-        self._logger = logging.getLogger('tacacs')
+        self._logger = logging.getLogger('tacacs.auth.' + self.NAME.lower())
 
     async def process_start(self, pkt: AuthenPacket) -> Tuple[Union[TACACSAuthenticationStatus, None], Union[TACACSAuthenticationReplyFlags, int]]:
         """

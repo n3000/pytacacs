@@ -13,7 +13,7 @@ class BaseAccountingPlugin(object):
     def __init__(self, config: "Config") -> None:
         self.config = config
 
-        self._logger = logging.getLogger('tacacs')
+        self._logger = logging.getLogger('tacacs.acct.' + self.NAME.lower())
 
     async def process(self, pkt: AcctPacket) -> bool:
         """
