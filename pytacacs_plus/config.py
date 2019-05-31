@@ -146,7 +146,7 @@ class Config(object):
     def _deal_with_authentication(self) -> None:
         self.authentication['plugins'] = []
 
-        plugins = self.parser.get('authentication', 'plugins', fallback='Dummy').split(',')
+        plugins = self.parser.get('authentication', 'plugins', fallback='DummyAuth').split(',')
 
         for plugin in plugins:
             if plugin in AUTHENTICATION_PLUGINS:

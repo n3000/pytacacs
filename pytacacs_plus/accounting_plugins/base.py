@@ -1,12 +1,16 @@
 import logging
+from typing import TYPE_CHECKING
+
 from pytacacs_plus.packet import AcctPacket
-from pytacacs_plus.config import Config
+
+if TYPE_CHECKING:
+    from pytacacs_plus.config import Config
 
 
 class BaseAccountingPlugin(object):
     NAME = 'Dummy'
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: "Config") -> None:
         self.config = config
 
         self._logger = logging.getLogger('tacacs')

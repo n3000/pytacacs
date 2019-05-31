@@ -1,14 +1,16 @@
 import logging
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, TYPE_CHECKING
 
 from pytacacs_plus.packet import AuthenPacket, TACACSAuthenticationStatus, TACACSAuthenticationReplyFlags
-from pytacacs_plus.config import Config
+
+if TYPE_CHECKING:
+    from pytacacs_plus.config import Config
 
 
 class BaseAuthenticationPlugin(object):
     NAME = 'DummyAuth'
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: "Config") -> None:
         self.config = config
 
         self._logger = logging.getLogger('tacacs')

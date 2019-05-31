@@ -97,7 +97,7 @@ def configure_logging(config: Optional[Config] = None) -> None:
         current_logger.setLevel(log_level)
 
 
-async def main(config_path: str, loop: asyncio.AbstractEventLoop) -> asyncio.AbstractServer:
+async def main(config_path: str, port: int, loop: asyncio.AbstractEventLoop) -> asyncio.AbstractServer:
     # Configure Logging
     configure_logging()
     logger = logging.getLogger('tacacs')
@@ -107,19 +107,19 @@ async def main(config_path: str, loop: asyncio.AbstractEventLoop) -> asyncio.Abs
     configure_logging(config)
 
     server_obj = lambda: TACACSPlusProtocol(config=config)
-    server = await loop.create_server(server_obj, '0.0.0.0', 8888)
+    server = await loop.create_server(server_obj, '0.0.0.0', port)
     logger.info('Serving on {0[0]}:{0[1]}'.format(server.sockets[0].getsockname()))
 
     return server
 
 
-def run(config: str = None) -> None:
+def run(port: int, config: str = None) -> None:
     if config is None:
         raise RuntimeError('config cannot be None')
 
     event_loop = asyncio.get_event_loop()
 
-    coro = main(config_path=config, loop=event_loop)
+    coro = main(config_path=config, port=port, loop=event_loop)
     server_handler = event_loop.run_until_complete(coro)
     try:
         event_loop.run_forever()
@@ -135,4 +135,4 @@ def run(config: str = None) -> None:
 if __name__ == '__main__':
     import os
     _config_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'config.ini')
-    run(config=_config_path)
+    run(port=8888, config=_config_path)
