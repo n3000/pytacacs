@@ -2,12 +2,13 @@ import logging
 from typing import Union, Tuple, List
 
 from pytacacs_plus.packet import AuthenPacket, TACACSAuthenticationStatus, TACACSAuthenticationReplyFlags
+from pytacacs_plus.config import Config
 
 
 class BaseAuthenticationPlugin(object):
     NAME = 'DummyAuth'
 
-    def __init__(self, config):
+    def __init__(self, config: Config) -> None:
         self.config = config
 
         self._logger = logging.getLogger('tacacs')
@@ -18,7 +19,7 @@ class BaseAuthenticationPlugin(object):
         """
         return TACACSAuthenticationStatus.TAC_PLUS_AUTHEN_STATUS_PASS, 0
 
-    async def process_continue(self, pkt: AuthenPacket) -> Tuple[Union[TACACSAuthenticationStatus, None], Union[TACACSAuthenticationReplyFlags, int]]:
+    async def process_continue(self, pkt: List[AuthenPacket]) -> Tuple[Union[TACACSAuthenticationStatus, None], Union[TACACSAuthenticationReplyFlags, int]]:
         """
         Returning None will skip this plugin
         """

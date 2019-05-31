@@ -1,16 +1,17 @@
 import asyncio
 import logging
 
-from typing import Union, Type
+from typing import Union, Type, List
 
 import pytacacs_plus.packet
+from pytacacs_plus.config import Config
 
 
 logger = logging.getLogger('tacacs.session')
 
 
 class Session(object):
-    def __init__(self, config, source_addr):
+    def __init__(self, config: Config, source_addr: str) -> None:
         self.config = config
         self.source_addr = source_addr
 
@@ -22,7 +23,7 @@ class Session(object):
 
 
 class AuthenticationSession(Session):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(AuthenticationSession, self).__init__(*args, **kwargs)
 
         self.remote_address = None
@@ -30,11 +31,9 @@ class AuthenticationSession(Session):
         # First pkt from client is a START packet
         self._seen_start_pkt = False
 
-        self.packets = []
+        self.packets: List[pytacacs_plus.packet.AuthenPacket] = []
 
     async def process(self, packet: pytacacs_plus.packet.AuthenPacket) -> Union[bytes, None]:
-        res = None
-
         if not self._seen_start_pkt:
             self._seen_start_pkt = True
             res = await self._handle_start_pkt(packet)
@@ -107,7 +106,7 @@ class AuthorisationSession(Session):
 
         # Shell with no cmd is autologon
         if packet.request_data['args'].get('service') == 'shell' and packet.request_data['args'].get('cmd') == '':
-            #logger.info('Sending privilege level 1')
+            # logger.info('Sending privilege level 1')
             pkt = packet.create_reply(
                 status=pytacacs_plus.packet.TACACSAuthorisationStatus.TAC_PLUS_AUTHOR_STATUS_PASS_ADD,
                 # args=['priv-lvl=1']
@@ -154,7 +153,7 @@ class AccountingSession(Session):
 
 class SessionFactory(object):
     @staticmethod
-    def get_session(packet) -> Type[Session]:
+    def get_session(packet: pytacacs_plus.packet.Packet) -> Type[Session]:
         if isinstance(packet, pytacacs_plus.packet.AuthenPacket):
             return AuthenticationSession
         elif isinstance(packet, pytacacs_plus.packet.AuthorPacket):

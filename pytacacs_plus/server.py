@@ -9,7 +9,7 @@ from pytacacs_plus.config import read_config, Config
 
 
 class TACACSPlusProtocol(asyncio.Protocol):
-    def __init__(self, *args, config: Config, **kwargs):
+    def __init__(self, *args, config: Config, **kwargs) -> None:
         super(TACACSPlusProtocol, self).__init__(*args, **kwargs)
 
         self.config = config
@@ -21,7 +21,7 @@ class TACACSPlusProtocol(asyncio.Protocol):
 
         self._sessions = {}
 
-    def connection_made(self, transport):
+    def connection_made(self, transport: asyncio.Transport) -> None:
         peername = transport.get_extra_info('peername')
         self.source_addr = peername[0]
 
@@ -41,7 +41,7 @@ class TACACSPlusProtocol(asyncio.Protocol):
         self.logger.debug('Connection from {0}'.format(self.source_name))
         self.transport = transport
 
-    def data_received(self, data):
+    def data_received(self, data: bytes) -> None:
         self.logger.debug('Data received: {0}, decoding...'.format(binascii.hexlify(data)))
 
         packet = self.pkt_decoder.decode(data)
@@ -75,7 +75,7 @@ class TACACSPlusProtocol(asyncio.Protocol):
             self.transport.write(response)
 
 
-def configure_logging(config: Optional[Config]=None):
+def configure_logging(config: Optional[Config] = None) -> None:
     log_level = logging.DEBUG
     if config:
         log_level = config.logging['tacacs']
@@ -89,15 +89,15 @@ def configure_logging(config: Optional[Config]=None):
         logger.addHandler(h)
 
     for logger_name in ('tacacs.network', 'tacacs.packet', 'tacacs.config', 'tacacs.session'):
-        l = logging.getLogger(logger_name)
+        current_logger = logging.getLogger(logger_name)
 
         if config:
             log_level = config.logging.get(logger_name, log_level)
 
-        l.setLevel(log_level)
+        current_logger.setLevel(log_level)
 
 
-async def main(config_path: str, loop: asyncio.AbstractEventLoop):
+async def main(config_path: str, loop: asyncio.AbstractEventLoop) -> asyncio.AbstractServer:
     # Configure Logging
     configure_logging()
     logger = logging.getLogger('tacacs')
@@ -113,7 +113,7 @@ async def main(config_path: str, loop: asyncio.AbstractEventLoop):
     return server
 
 
-def run(config: str=None):
+def run(config: str = None) -> None:
     if config is None:
         raise RuntimeError('config cannot be None')
 

@@ -18,25 +18,26 @@ logger = logging.getLogger('tacacs.config')
 ACCOUNTING_PLUGINS = get_accounting_plugins()
 AUTHENTICATION_PLUGINS = get_authentication_plugins()
 
+
 class Client(object):
-    def __init__(self, name, ip, shared_key=None):
+    def __init__(self, name: str, ip: str, shared_key: Optional[str] = None) -> None:
         self.name = name
         self.ip = ip
         self.shared_key = shared_key
 
 
 class User(object):
-    def __init__(self, name, password, priv):
+    def __init__(self, name: str, password: str, priv: str) -> None:
         self.name = name
         self.password = password
         self.priv = priv
 
-    def authenticate(self, password):
+    def authenticate(self, password: str) -> bool:
         return hmac.compare_digest(crypt.crypt(password, self.password), self.password)
 
 
 class Config(object):
-    def __init__(self, file):
+    def __init__(self, file: str) -> None:
 
         self.parser = configparser.ConfigParser()
         if os.path.exists(file):
@@ -69,7 +70,7 @@ class Config(object):
             elif section.startswith('user:'):
                 self._add_user(section)
 
-    def _add_client(self, section):
+    def _add_client(self, section: str) -> None:
         name = section.split(':', 1)[-1]
         ip = self.parser.get(section, 'ip', fallback=None)
         host = self.parser.get(section, 'host', fallback=None)
@@ -90,7 +91,7 @@ class Config(object):
             self._clients[ip] = Client(name, ip, shared_secret)
             logger.info('Registered client {0}'.format(name))
 
-    def _add_user(self, section):
+    def _add_user(self, section: str) -> None:
         name = section.split(':', 1)[-1]
         password = self.parser.get(section, 'password', fallback=None)
         priv = self.parser.get(section, 'privilege', fallback=None)
@@ -109,7 +110,7 @@ class Config(object):
             return 'INFO'
         return level.upper()
 
-    def _deal_with_logging(self):
+    def _deal_with_logging(self) -> None:
         if self.parser.has_section('logging'):
             current_level = self._parse_log_level(self.parser.get('logging', 'log_level', fallback='INFO'))
 
@@ -121,7 +122,7 @@ class Config(object):
                 'tacacs.session': self._parse_log_level(self.parser.get('logging', 'session_log_level', fallback=current_level))
             }
 
-    def _deal_with_accounting(self):
+    def _deal_with_accounting(self) -> None:
         self.accounting['ignore_task_id_0'] = self.parser.getboolean('accounting', 'ignore_task_id_0', fallback=False)
         self.accounting['plugins'] = []
 
@@ -142,7 +143,7 @@ class Config(object):
             else:
                 logger.warning('Accounting plugin {0} doesnt exist'.format(plugin))
 
-    def _deal_with_authentication(self):
+    def _deal_with_authentication(self) -> None:
         self.authentication['plugins'] = []
 
         plugins = self.parser.get('authentication', 'plugins', fallback='Dummy').split(',')
@@ -162,13 +163,13 @@ class Config(object):
             else:
                 logger.warning('Authentication plugin {0} doesnt exist'.format(plugin))
 
-    def get_shared_key(self, client_addr: Optional[str]=None) -> Union[str, None]:
+    def get_shared_key(self, client_addr: Optional[str] = None) -> Union[str, None]:
         if client_addr in self and self[client_addr].shared_key:
             return self[client_addr].shared_key
 
         return self._default_key
 
-    def get_user(self, user) -> Union[User, None]:
+    def get_user(self, user: str) -> Union[User, None]:
         return self._users.get(user, None)
 
     def get_accounting_plugins(self) -> List[BaseAccountingPlugin]:

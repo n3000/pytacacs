@@ -116,7 +116,7 @@ class Packet(object):
     HEADER_STRUCT = '>BBBBII'
     HEADER_SIZE = 12
 
-    def __init__(self, config, source_addr: str, source_name: str, data: bytes):
+    def __init__(self, config, source_addr: str, source_name: str, data: bytes) -> None:
         self._config = config
         self._source_addr = source_addr
         self._source_name = source_name
@@ -150,7 +150,7 @@ class Packet(object):
 
         return secret_key
 
-    def _do_crypto(self, data: bytes, seq_no: int=None):
+    def _do_crypto(self, data: bytes, seq_no: int = None) -> bytes:
         if TACACSFlags.TAC_PLUS_UNENCRYPTED_FLAG not in self.flags:
             seq_no = seq_no if seq_no else self.sequence_number
 
@@ -167,7 +167,7 @@ class Packet(object):
             data = plaintext
         return data
 
-    def _encrypted_pad(self, secret_key: str, seq_no, length: int):
+    def _encrypted_pad(self, secret_key: str, seq_no, length: int) -> bytes:
         result = b''
         last_hash = b''
 
@@ -198,15 +198,15 @@ class Packet(object):
         return self._type
 
     @property
-    def sequence_number(self):
+    def sequence_number(self) -> int:
         return self._header[2]
 
     @property
-    def session_id(self):
+    def session_id(self) -> int:
         return self._header[4]
 
     @property
-    def length(self):
+    def length(self) -> int:
         return self._header[5]
 
     @staticmethod
@@ -245,14 +245,14 @@ class AuthenPacket(Packet):
     _type = TACACSPacketType.TAC_PLUS_AUTHEN
     REPLY_STRUCT = '>BBHH'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(AuthenPacket, self).__init__(*args, **kwargs)
 
         self.packet_type = None
         self.start_data = {}
         self.continue_data = {}
 
-    def decode_start(self):
+    def decode_start(self) -> None:
         """
          1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
         +----------------+----------------+----------------+----------------+
@@ -297,7 +297,7 @@ class AuthenPacket(Packet):
 
         self.start_data = result_data
 
-    def decode_continue(self):
+    def decode_continue(self) -> None:
         """
          1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
         +----------------+----------------+----------------+----------------+
@@ -325,7 +325,11 @@ class AuthenPacket(Packet):
 
         self.continue_data = result_data
 
-    def create_reply(self, status: TACACSAuthenticationStatus, flags: Union[TACACSAuthenticationReplyFlags, int]=0, server_msg: Optional[str]=None, data: Optional[bytes]=None):
+    def create_reply(self, status: TACACSAuthenticationStatus,
+                     flags: Union[TACACSAuthenticationReplyFlags, int] = 0,
+                     server_msg: Optional[str] = None,
+                     data: Optional[bytes] = None) -> bytes:
+
         if server_msg:
             server_msg = server_msg.encode()
         else:
@@ -350,7 +354,7 @@ class AuthorPacket(Packet):
     REPLY_STRUCT = '>BBHH'
 
     # noinspection PyDictCreation
-    def decode_request(self):
+    def decode_request(self) -> None:
         """
          1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
         +----------------+----------------+----------------+----------------+
@@ -409,7 +413,11 @@ class AuthorPacket(Packet):
 
         self.request_data = result_data
 
-    def create_reply(self, status: TACACSAuthorisationStatus, server_msg: Optional[str]=None, data: Optional[bytes]=None, args: Optional[List[str]]=None) -> bytes:
+    def create_reply(self, status: TACACSAuthorisationStatus,
+                     server_msg: Optional[str] = None,
+                     data: Optional[bytes] = None,
+                     args: Optional[List[str]] = None) -> bytes:
+
         if server_msg:
             server_msg = server_msg.encode()
         else:
@@ -441,14 +449,14 @@ class AcctPacket(Packet):
     _type = TACACSPacketType.TAC_PLUS_ACCT
     REPLY_STRUCT = '>HHB'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(AcctPacket, self).__init__(*args, **kwargs)
 
         self.packet_type = None
         self.request_data = {}
 
     # noinspection PyDictCreation
-    def decode_request(self):
+    def decode_request(self) -> None:
         """
          1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
         +----------------+----------------+----------------+----------------+
@@ -522,7 +530,10 @@ class AcctPacket(Packet):
             'authen_service': self.request_data['authen_service'].name,
         }
 
-    def create_reply(self, status: TACACSAccountingStatus, server_msg: Optional[str]=None, data: Optional[bytes]=None) -> bytes:
+    def create_reply(self, status: TACACSAccountingStatus,
+                     server_msg: Optional[str] = None,
+                     data: Optional[bytes] = None) -> bytes:
+
         if server_msg:
             server_msg = server_msg.encode()
         else:
