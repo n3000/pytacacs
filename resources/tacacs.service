@@ -10,6 +10,7 @@ ExecStartPre=-/usr/bin/docker stop tacacs
 ExecStartPre=-/usr/bin/docker rm tacacs
 ExecStartPre=/usr/bin/docker pull terrycain/pytacacs:latest
 ExecStart=/usr/bin/docker run -p 49:49 -v /etc/pytacacs.ini:/etc/pytacacs/config.cfg --rm --name tacacs terrycain/pytacacs:latest
+ExecStop=/usr/bin/docker stop -t 5 tacacs
 
 [Install]
 WantedBy=multi-user.target
